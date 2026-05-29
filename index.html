@@ -44,6 +44,34 @@ button,input,select,textarea{font-family:inherit}
 .tabs{display:flex;gap:2px;background:var(--surface2);border-radius:var(--radius);padding:3px;margin-bottom:20px;width:fit-content}
 .tab{padding:7px 18px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text2);transition:all 0.15s}
 .tab.active{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+.insight-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
+.top-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);min-height:132px;position:relative;overflow:hidden}
+.top-card:first-child{border-color:#dbc36a;background:#fffaf0}
+.top-rank{font-size:11px;font-weight:700;color:var(--text3);margin-bottom:10px}
+.top-card:first-child .top-rank{color:#9a7815}
+.top-name{font-size:17px;font-weight:700;line-height:1.25;margin-bottom:4px}
+.top-region{font-size:12px;color:var(--text3);margin-bottom:12px}
+.top-count{display:flex;align-items:flex-end;gap:4px;color:var(--accent)}
+.top-count strong{font-size:30px;line-height:1;font-weight:700}
+.top-count span{font-size:12px;font-weight:700;padding-bottom:3px}
+.top-share{position:absolute;right:14px;bottom:12px;font-size:12px;color:var(--text3);font-weight:700}
+.metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.metric-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px}
+.metric-label{font-size:11px;color:var(--text2);font-weight:700;margin-bottom:5px}
+.metric-value{font-size:22px;font-weight:700;color:var(--text)}
+.metric-sub{font-size:11px;color:var(--text3);margin-top:2px}
+.panel-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.insight-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow)}
+.panel-title{font-size:14px;font-weight:700;margin-bottom:10px}
+.mini-list{display:flex;flex-direction:column;gap:8px}
+.mini-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;font-size:13px}
+.mini-main{min-width:0}
+.mini-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mini-sub{font-size:11px;color:var(--text3);margin-top:1px}
+.mini-value{font-weight:700;color:var(--accent)}
+.mini-bar{grid-column:1/-1;height:5px;background:var(--surface2);border-radius:3px;overflow:hidden}
+.mini-fill{height:100%;background:var(--accent);border-radius:3px}
+.empty-tight{text-align:center;padding:14px;color:var(--text3);font-size:13px}
 .filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
 .fbtn{padding:5px 12px;border-radius:20px;font-size:12px;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text2);transition:all 0.15s;font-weight:500}
 .fbtn:hover{border-color:var(--border2);color:var(--text)}
@@ -151,6 +179,7 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
   .wrap{padding:14px 10px}
   .tabs{width:100%}
   .tab{flex:1;text-align:center;padding:8px 4px}
+  .insight-grid,.metric-grid,.panel-grid{grid-template-columns:1fr}
   .cal-cell{min-height:64px;padding:5px}
   .rank-table-wrap{overflow-x:auto}
   .rank-table{min-width:650px}
@@ -173,6 +202,7 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
   <div class="tabs">
     <div class="tab active" data-tab="calendar">📅 달력</div>
     <div class="tab" data-tab="ranking">📊 상권 현황</div>
+    <div class="tab" data-tab="insights">🏆 TOP 상권</div>
     <div class="tab" data-tab="settings">⚙️ 설정</div>
   </div>
 
@@ -186,6 +216,28 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
         <div class="cal-head-cell">토</div>
       </div>
       <div class="cal-grid" id="calGrid"></div>
+    </div>
+  </div>
+ <div id="pane-insights" style="display:none">
+    <div class="insight-grid" id="topStores"></div>
+    <div class="metric-grid" id="metricGrid"></div>
+    <div class="panel-grid">
+      <div class="insight-panel">
+        <p class="panel-title">관리자별 방문</p>
+        <div class="mini-list" id="managerInsight"></div>
+      </div>
+      <div class="insight-panel">
+        <p class="panel-title">지역별 방문</p>
+        <div class="mini-list" id="regionInsight"></div>
+      </div>
+      <div class="insight-panel">
+        <p class="panel-title">이번 달 미방문 상권</p>
+        <div class="mini-list" id="unvisitedInsight"></div>
+      </div>
+      <div class="insight-panel">
+        <p class="panel-title">최근 방문 메모</p>
+        <div class="mini-list" id="commentInsight"></div>
+      </div>
     </div>
   </div>
 
@@ -396,11 +448,13 @@ async function setCheckCount(storeId, y, m, cnt){
 
 function render(){
   renderCalendar();
+  renderInsights();
   renderRanking();
   renderSettings();
   renderFilters();
   document.getElementById('monthLabel').textContent = `${curYear}년 ${MONTHS[curMonth]}`;
 }
+  
 function renderFilters(){
   let h=`<button class="fbtn ${activeFilter==='all'?'active':''}" onclick="setFilter('all')">전체</button>`;
   managers.forEach((m,i)=>{
@@ -443,6 +497,90 @@ function renderCalendar(){
     </div>`;
   }
   document.getElementById('calGrid').innerHTML=h;
+}
+  
+function renderInsights(){
+  const vs=getMonth(curYear,curMonth);
+  const total=vs.length;
+  const storeCounts={};
+  const managerCounts={};
+  const regionCounts={};
+  const commentRows=[];
+
+  vs.forEach(v=>{
+    storeCounts[v.store_id]=(storeCounts[v.store_id]||0)+1;
+    managerCounts[v.manager]=(managerCounts[v.manager]||0)+1;
+    const store=stores.find(s=>s.id===v.store_id);
+    const region=store?.region || '지역 없음';
+    regionCounts[region]=(regionCounts[region]||0)+1;
+    if(v.comment && v.comment.trim()) commentRows.push(v);
+  });
+
+  const rankedStores=stores
+    .map(s=>({...s,count:storeCounts[s.id]||0}))
+    .sort((a,b)=>b.count-a.count || a.name.localeCompare(b.name));
+  const top3=rankedStores.slice(0,3);
+  const visitedStoreCount=rankedStores.filter(s=>s.count>0).length;
+  const activeManagerCount=Object.keys(managerCounts).length;
+  const coverage=stores.length ? Math.round(visitedStoreCount/stores.length*100) : 0;
+
+  document.getElementById('topStores').innerHTML=top3.map((s,i)=>{
+    const share=total ? Math.round(s.count/total*100) : 0;
+    const label=['1위','2위','3위'][i];
+    return `<div class="top-card" onclick="openStoreDetail('${s.id}')" style="cursor:pointer">
+      <div class="top-rank">${label}</div>
+      <div class="top-name">${esc(s.name)}</div>
+      <div class="top-region">${esc(s.region || '지역 없음')}</div>
+      <div class="top-count"><strong>${s.count}</strong><span>회 방문</span></div>
+      <div class="top-share">${share}%</div>
+    </div>`;
+  }).join('') || '<div class="empty">매장이 없습니다</div>';
+
+  document.getElementById('metricGrid').innerHTML=`
+    <div class="metric-card"><div class="metric-label">이번 달 총 방문</div><div class="metric-value">${total}</div><div class="metric-sub">선택 월 기준</div></div>
+    <div class="metric-card"><div class="metric-label">방문 상권</div><div class="metric-value">${visitedStoreCount}</div><div class="metric-sub">전체 ${stores.length}개 중</div></div>
+    <div class="metric-card"><div class="metric-label">커버리지</div><div class="metric-value">${coverage}%</div><div class="metric-sub">한 번 이상 방문</div></div>
+    <div class="metric-card"><div class="metric-label">활동 관리자</div><div class="metric-value">${activeManagerCount}</div><div class="metric-sub">방문 기록 기준</div></div>`;
+
+  renderMiniRank('managerInsight',
+    managers.map(m=>({name:m.name,sub:'관리자',value:managerCounts[m.name]||0})).sort((a,b)=>b.value-a.value),
+    total,
+    '회'
+  );
+  renderMiniRank('regionInsight',
+    Object.entries(regionCounts).map(([name,value])=>({name,sub:'지역',value})).sort((a,b)=>b.value-a.value),
+    total,
+    '회'
+  );
+
+  const unvisited=rankedStores.filter(s=>s.count===0).slice(0,8);
+  document.getElementById('unvisitedInsight').innerHTML=unvisited.length ? unvisited.map(s=>`
+    <div class="mini-row">
+      <div class="mini-main"><div class="mini-name">${esc(s.name)}</div><div class="mini-sub">${esc(s.region || '지역 없음')}</div></div>
+      <div class="mini-value">0회</div>
+    </div>`).join('') : '<div class="empty-tight">이번 달 모든 상권을 한 번 이상 방문했습니다</div>';
+
+  commentRows.sort((a,b)=>b.date.localeCompare(a.date));
+  document.getElementById('commentInsight').innerHTML=commentRows.slice(0,5).map(v=>{
+    const store=splitStoreKey(v.store).name;
+    const day=parseInt(v.date.split('-')[2]);
+    return `<div class="mini-row">
+      <div class="mini-main"><div class="mini-name">${esc(store)}</div><div class="mini-sub">${day}일 · ${esc(v.manager)} · ${esc(v.comment)}</div></div>
+    </div>`;
+  }).join('') || '<div class="empty-tight">이번 달 메모가 없습니다</div>';
+}
+
+function renderMiniRank(id, rows, total, suffix){
+  const nonEmpty=rows.filter(r=>r.value>0).slice(0,6);
+  const max=Math.max(1,...nonEmpty.map(r=>r.value));
+  document.getElementById(id).innerHTML=nonEmpty.length ? nonEmpty.map(r=>{
+    const pct=total ? Math.round(r.value/total*100) : 0;
+    return `<div class="mini-row">
+      <div class="mini-main"><div class="mini-name">${esc(r.name)}</div><div class="mini-sub">${esc(r.sub)} · ${pct}%</div></div>
+      <div class="mini-value">${r.value}${suffix}</div>
+      <div class="mini-bar"><div class="mini-fill" style="width:${Math.max(4,Math.round(r.value/max*100))}%"></div></div>
+    </div>`;
+  }).join('') : '<div class="empty-tight">이번 달 방문 기록이 없습니다</div>';
 }
 function renderRanking(){
   const vs=getMonth(curYear,curMonth);
@@ -666,12 +804,14 @@ document.querySelectorAll('.tab').forEach(t=>{
     document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');
     const tab=t.dataset.tab;
     document.getElementById('pane-calendar').style.display=tab==='calendar'?'block':'none';
+    document.getElementById('pane-insights').style.display=tab==='insights'?'block':'none';
     document.getElementById('pane-ranking').style.display=tab==='ranking'?'block':'none';
     document.getElementById('pane-settings').style.display=tab==='settings'?'block':'none';
   });
 });
 document.getElementById('newMgr').addEventListener('keydown',e=>{if(e.key==='Enter')addManager()});
 document.getElementById('newStore').addEventListener('keydown',e=>{if(e.key==='Enter')addStore()});
+  
 document.getElementById('overlay').addEventListener('click',e=>{if(e.target===document.getElementById('overlay'))closeModal('overlay')});
 document.getElementById('storeOverlay').addEventListener('click',e=>{if(e.target===document.getElementById('storeOverlay'))closeModal('storeOverlay')});
 
