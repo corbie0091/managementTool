@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>방문 기록 관리</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
   --bg: #f5f4f0;
@@ -18,6 +19,7 @@
   --accent: #2d4a3e;
   --accent-light: #e8f0ec;
   --accent2: #c84b2f;
+  --danger-light: #fdf0ed;
   --radius: 10px;
   --radius-sm: 6px;
   --shadow: 0 1px 4px rgba(0,0,0,0.07);
@@ -25,28 +27,28 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+button,input,select,textarea{font-family:inherit}
 .wrap{max-width:980px;margin:0 auto;padding:24px 16px}
-.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:12px}
 .topbar h1{font-size:20px;font-weight:700;letter-spacing:-0.5px}
 .topbar h1 span{color:var(--accent)}
 .month-nav{display:flex;align-items:center;gap:8px}
 .mnbtn{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:background 0.15s}
 .mnbtn:hover{background:var(--surface2)}
 .month-label{font-size:15px;font-weight:700;min-width:110px;text-align:center}
-
-/* Tabs */
+.sync-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text2);font-size:12px}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--text3);display:inline-block;margin-right:6px}
+.sync-bar.ok .sync-dot{background:var(--accent)}
+.sync-bar.err{border-color:#f0b8aa;background:var(--danger-light);color:var(--accent2)}
+.sync-bar.err .sync-dot{background:var(--accent2)}
 .tabs{display:flex;gap:2px;background:var(--surface2);border-radius:var(--radius);padding:3px;margin-bottom:20px;width:fit-content}
 .tab{padding:7px 18px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text2);transition:all 0.15s}
 .tab.active{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
-
-/* Filter */
 .filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
-.fbtn{padding:5px 12px;border-radius:20px;font-size:12px;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text2);font-family:inherit;transition:all 0.15s;font-weight:500}
+.fbtn{padding:5px 12px;border-radius:20px;font-size:12px;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text2);transition:all 0.15s;font-weight:500}
 .fbtn:hover{border-color:var(--border2);color:var(--text)}
 .fbtn.active{background:var(--accent);border-color:var(--accent);color:#fff}
-
-/* Calendar */
-.cal-wrap{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow)}
+.cal-wrap,.rank-table-wrap{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow)}
 .cal-head-row{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border)}
 .cal-head-cell{text-align:center;padding:10px 4px;font-size:12px;font-weight:700;color:var(--text2)}
 .cal-head-cell:first-child{color:var(--accent2)}
@@ -66,9 +68,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
 .visit-count{position:absolute;bottom:4px;right:6px;font-size:10px;color:var(--text3);font-weight:600}
 .has-comment{position:absolute;top:5px;right:6px;font-size:10px;opacity:0.7}
-
-/* Ranking table */
-.rank-table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
 .rank-table{width:100%;border-collapse:collapse}
 .rank-table thead tr{border-bottom:2px solid var(--border)}
 .rank-table th{padding:10px 14px;font-size:12px;font-weight:700;color:var(--text2);text-align:left;white-space:nowrap;background:var(--surface2)}
@@ -80,9 +79,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .rank-table tr:hover td{background:var(--surface2)}
 .rank-table tr.clickable{cursor:pointer}
 .r-num{text-align:center;font-size:13px;font-weight:700;color:var(--text3)}
-.r-num.g1{color:#c9a227}
-.r-num.g2{color:#7a7a7a}
-.r-num.g3{color:#9c6838}
 .r-region{color:var(--text3);font-size:11px;margin-right:4px}
 .r-cnt-cell{text-align:center}
 .r-cnt-num{font-weight:700;font-size:14px;color:var(--accent)}
@@ -93,8 +89,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .check-badge:hover{border-color:var(--accent);color:var(--accent)}
 .check-badge.checked{background:var(--accent);border-color:var(--accent);color:#fff}
 .r-last-visit{font-size:11px;color:var(--text3)}
-
-/* Modal */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:200;display:none;align-items:center;justify-content:center;padding:16px}
 .overlay.show{display:flex}
 .modal{background:var(--surface);border-radius:14px;width:100%;max-width:520px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--shadow-lg)}
@@ -106,7 +100,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .modal-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;flex-shrink:0}
 .lbl{font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px;margin-top:14px;text-transform:uppercase;letter-spacing:0.5px}
 .lbl:first-child{margin-top:0}
-select,input[type=text],textarea{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px;background:var(--surface);color:var(--text);outline:none;transition:border-color 0.15s}
+select,input[type=text],textarea{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--surface);color:var(--text);outline:none;transition:border-color 0.15s}
 select:focus,input[type=text]:focus,textarea:focus{border-color:var(--accent)}
 textarea{resize:vertical;min-height:72px;line-height:1.5}
 .store-list{display:flex;flex-direction:column;gap:3px;max-height:190px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px}
@@ -115,27 +109,20 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
 .s-item.sel{background:var(--accent-light)}
 .s-item input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px;flex-shrink:0}
 .s-region{color:var(--text3);font-size:11px;margin-right:3px}
-
-/* Visit entries */
 .visit-log{display:flex;flex-direction:column;gap:5px}
 .v-entry{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm)}
 .v-badge{padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;white-space:nowrap;flex-shrink:0}
 .v-info{flex:1;min-width:0}
 .v-store{font-size:13px;font-weight:500}
-.v-date{font-size:11px;color:var(--text3);margin-top:1px}
 .v-comment{font-size:12px;color:var(--text2);margin-top:4px;padding:4px 8px;background:var(--surface2);border-radius:4px;line-height:1.4}
 .v-del{background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;line-height:1;padding:0 2px;flex-shrink:0}
 .v-del:hover{color:var(--accent2)}
 .divider{border:none;border-top:1px solid var(--border);margin:14px 0}
-
-/* Buttons */
-.btn{padding:8px 16px;border-radius:var(--radius-sm);font-family:inherit;font-size:13px;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text);font-weight:500;transition:all 0.15s}
+.btn{padding:8px 16px;border-radius:var(--radius-sm);font-size:13px;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text);font-weight:500;transition:all 0.15s}
 .btn:hover{background:var(--surface2)}
 .btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
 .btn-primary:hover{background:#243d33}
 .btn-sm{padding:5px 10px;font-size:12px}
-
-/* Settings */
 .setting-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:16px}
 .setting-title{font-size:14px;font-weight:700;margin-bottom:12px}
 .add-row{display:flex;gap:6px;margin-bottom:10px}
@@ -147,11 +134,6 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
 .item-del{background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;padding:0 2px}
 .item-del:hover{color:var(--accent2)}
 .empty{text-align:center;padding:24px;color:var(--text3);font-size:13px}
-
-/* Store detail modal */
-.sd-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
-.sd-title{font-size:17px;font-weight:700}
-.sd-region{font-size:12px;color:var(--text3);margin-top:2px}
 .sd-stats{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
 .sd-stat{background:var(--surface2);border-radius:var(--radius-sm);padding:10px 16px;text-align:center;flex:1;min-width:80px}
 .sd-stat-val{font-size:22px;font-weight:700;color:var(--accent)}
@@ -162,9 +144,14 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
 .sd-entry-date{font-size:12px;font-weight:700;color:var(--text)}
 .sd-entry-mgr{padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700}
 .sd-entry-comment{font-size:12px;color:var(--text2);line-height:1.4;padding:5px 8px;background:var(--surface2);border-radius:4px;margin-top:4px}
-
-/* comment indicator on calendar */
-.comment-dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--accent2);margin-left:3px;vertical-align:middle}
+@media (max-width:720px){
+  .wrap{padding:14px 10px}
+  .tabs{width:100%}
+  .tab{flex:1;text-align:center;padding:8px 4px}
+  .cal-cell{min-height:64px;padding:5px}
+  .rank-table-wrap{overflow-x:auto}
+  .rank-table{min-width:650px}
+}
 </style>
 </head>
 <body>
@@ -178,13 +165,14 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
     </div>
   </div>
 
+  <div class="sync-bar" id="syncBar"><span><span class="sync-dot"></span><span id="syncText">Supabase 연결 확인 중</span></span><button class="btn btn-sm" onclick="loadAll()">새로고침</button></div>
+
   <div class="tabs">
     <div class="tab active" data-tab="calendar">📅 달력</div>
     <div class="tab" data-tab="ranking">📊 상권 현황</div>
     <div class="tab" data-tab="settings">⚙️ 설정</div>
   </div>
 
-  <!-- 달력 탭 -->
   <div id="pane-calendar">
     <div class="filter-row" id="filterRow"></div>
     <div class="cal-wrap">
@@ -198,7 +186,6 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
     </div>
   </div>
 
-  <!-- 상권 현황 탭 -->
   <div id="pane-ranking" style="display:none">
     <div class="rank-table-wrap">
       <table class="rank-table">
@@ -217,7 +204,6 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
     </div>
   </div>
 
-  <!-- 설정 탭 -->
   <div id="pane-settings" style="display:none">
     <div class="setting-section">
       <p class="setting-title">관리자 관리</p>
@@ -239,16 +225,16 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
     <div class="setting-section" style="border-color:#fcd0c8">
       <p class="setting-title" style="color:var(--accent2)">데이터 관리</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-sm" onclick="seedDefaultData()">기본 관리자/매장 넣기</button>
         <button class="btn btn-sm" onclick="exportData()">📤 내보내기 (JSON)</button>
         <button class="btn btn-sm" onclick="document.getElementById('importFile').click()">📥 불러오기</button>
         <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
-        <button class="btn btn-sm" style="color:var(--accent2);border-color:#fcd0c8" onclick="clearAll()">🗑 전체 초기화</button>
+        <button class="btn btn-sm" style="color:var(--accent2);border-color:#fcd0c8" onclick="clearVisits()">방문 기록 초기화</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- 날짜 클릭 모달 -->
 <div class="overlay" id="overlay">
   <div class="modal">
     <div class="modal-hdr">
@@ -272,7 +258,6 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
   </div>
 </div>
 
-<!-- 상권 상세 모달 -->
 <div class="overlay" id="storeOverlay">
   <div class="modal">
     <div class="modal-hdr">
@@ -287,12 +272,17 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
 </div>
 
 <script>
+const SUPABASE_URL = 'https://uvaggfsqruebvysspjsz.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV2YWdnZnNxcnVlYnZ5c3NwanN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNTUyNDYsImV4cCI6MjA5NTYzMTI0Nn0.MwSK6Pp6OshW2J-wGltRukmHAj6lzb9jxrgkb1aXuQw';
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 const MGR_COLORS = [
   {fg:'#2d4a3e',bg:'#e8f0ec'},{fg:'#8b3a6e',bg:'#f7e8f2'},
   {fg:'#c84b2f',bg:'#fdf0ed'},{fg:'#2d5fa0',bg:'#e8eef8'},
   {fg:'#6b4f12',bg:'#f8f0dc'},{fg:'#1a6b6b',bg:'#e0f2f2'},
   {fg:'#5c3d99',bg:'#ede8f8'},{fg:'#7a3030',bg:'#f8e8e8'}
 ];
+const DEFAULT_MANAGERS = ['박상현','정유진','이정훈','이상철'];
 const DEFAULT_STORES = [
   '남부산|서면 공구상가','남부산|서면 롯데후문','남부산|서면 영광도서',
   '남부산|전포동','남부산|양정','남부산|당감','남부산|개금','남부산|가야',
@@ -304,15 +294,12 @@ const DEFAULT_STORES = [
   '남부산|사상터미널','남부산|감전동','남부산|동서대/주례','남부산|방통대/북부경찰서','남부산|장림'
 ];
 
-function load(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
-function save(k,v){localStorage.setItem(k,JSON.stringify(v))}
-
-let managers = load('vt_managers',['박상현','정유진','이정훈','이상철']);
-let stores   = load('vt_stores', DEFAULT_STORES);
-let visits   = load('vt_visits', {});
-// checks: { 'storeName': { 'YYYY-MM': [1,2,3,...] } }  숫자 = visit index (just count)
-let checks   = load('vt_checks', {});
-let curYear  = new Date().getFullYear();
+let managers = [];
+let stores = [];
+let visits = {};
+let visitRows = [];
+let checks = {};
+let curYear = new Date().getFullYear();
 let curMonth = new Date().getMonth();
 let activeFilter = 'all';
 let selectedStore = null;
@@ -321,31 +308,87 @@ let currentKey = null;
 const TODAY = new Date();
 const MONTHS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
 
+function esc(s){return String(s ?? '').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function jsArg(s){return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'")}
 function mgrColor(i){return MGR_COLORS[i%MGR_COLORS.length]}
-function mgrIdx(n){return managers.indexOf(n)}
+function mgrIdx(n){return managers.findIndex(m=>m.name===n)}
 function dateKey(y,m,d){return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`}
 function monthKey(y,m){return `${y}-${String(m+1).padStart(2,'0')}`}
+function storeKey(store){return `${store.region || ''}|${store.name}`}
+function splitStoreKey(key){const p=key.split('|');return {region:p.length>1?p[0]:'',name:p.length>1?p.slice(1).join('|'):key}}
 function getDay(k){return visits[k]||[]}
 function getMonth(y,m){
   const p=monthKey(y,m)+'-';
-  return Object.entries(visits).filter(([k])=>k.startsWith(p)).flatMap(([,v])=>v);
+  return Object.entries(visits).filter(([k])=>k.startsWith(p)).flatMap(([date,v])=>v.map(row=>({...row,date})));
 }
-function getStoreVisits(store){
-  // all visits ever for this store, sorted newest first
-  return Object.entries(visits)
-    .flatMap(([date,vs])=>vs.map((v,i)=>({...v,date,idx:i})))
-    .filter(v=>v.store===store)
-    .sort((a,b)=>b.date.localeCompare(a.date));
+function setSync(text, state='ok'){
+  const bar=document.getElementById('syncBar');
+  bar.className=`sync-bar ${state}`;
+  document.getElementById('syncText').textContent=text;
 }
-function getCheckCount(store, y, m){
+function assertConfigured(){
+  if(SUPABASE_URL.startsWith('여기에_') || SUPABASE_ANON_KEY.startsWith('여기에_')){
+    throw new Error('index.html 상단의 SUPABASE_URL, SUPABASE_ANON_KEY 값을 먼저 입력하세요.');
+  }
+}
+async function run(q){
+  const {data,error}=await q;
+  if(error) throw error;
+  return data;
+}
+
+async function loadAll(){
+  try{
+    assertConfigured();
+    setSync('Supabase에서 데이터를 불러오는 중', '');
+    const [mgrData, storeData, visitData, checkData] = await Promise.all([
+      run(db.from('managers').select('*').order('sort_order').order('created_at')),
+      run(db.from('stores').select('*').order('sort_order').order('created_at')),
+      run(db.from('visits').select('*, managers(name), stores(region,name)').order('visit_date', {ascending:false}).order('created_at', {ascending:false})),
+      run(db.from('store_checks').select('*'))
+    ]);
+    managers=mgrData;
+    stores=storeData;
+    visitRows=visitData.map(v=>({
+      id:v.id,
+      date:v.visit_date,
+      manager_id:v.manager_id,
+      store_id:v.store_id,
+      manager:v.managers?.name || '삭제된 관리자',
+      store: `${v.stores?.region || ''}|${v.stores?.name || '삭제된 매장'}`,
+      comment:v.comment || ''
+    }));
+    visits={};
+    visitRows.forEach(v=>{
+      if(!visits[v.date]) visits[v.date]=[];
+      visits[v.date].push(v);
+    });
+    checks={};
+    checkData.forEach(c=>{
+      checks[c.store_id] = checks[c.store_id] || {};
+      checks[c.store_id][c.month_key] = c.count;
+    });
+    render();
+    setSync(`Supabase 연결됨 · 관리자 ${managers.length}명 · 매장 ${stores.length}개 · 방문 ${visitRows.length}건`, 'ok');
+  }catch(err){
+    console.error(err);
+    setSync(err.message || 'Supabase 연결 실패', 'err');
+    render();
+  }
+}
+
+function getCheckCount(storeId, y, m){
   const mk = monthKey(y,m);
-  return (checks[store]&&checks[store][mk]) ? checks[store][mk] : 0;
+  return checks[storeId]?.[mk] || 0;
 }
-function setCheckCount(store, y, m, cnt){
-  if(!checks[store]) checks[store]={};
+async function setCheckCount(storeId, y, m, cnt){
   const mk = monthKey(y,m);
-  checks[store][mk] = cnt;
-  save('vt_checks', checks);
+  if(cnt <= 0){
+    await run(db.from('store_checks').delete().eq('store_id', storeId).eq('month_key', mk));
+  }else{
+    await run(db.from('store_checks').upsert({store_id:storeId,month_key:mk,count:cnt},{onConflict:'store_id,month_key'}));
+  }
+  await loadAll();
 }
 
 function render(){
@@ -355,17 +398,15 @@ function render(){
   renderFilters();
   document.getElementById('monthLabel').textContent = `${curYear}년 ${MONTHS[curMonth]}`;
 }
-
 function renderFilters(){
   let h=`<button class="fbtn ${activeFilter==='all'?'active':''}" onclick="setFilter('all')">전체</button>`;
   managers.forEach((m,i)=>{
-    const c=mgrColor(i);const a=activeFilter===m;
-    h+=`<button class="fbtn ${a?'active':''}" style="${a?`background:${c.fg};border-color:${c.fg};color:#fff`:''}" onclick="setFilter('${m}')">${m}</button>`;
+    const c=mgrColor(i);const a=activeFilter===m.name;
+    h+=`<button class="fbtn ${a?'active':''}" style="${a?`background:${c.fg};border-color:${c.fg};color:#fff`:''}" onclick="setFilter('${jsArg(m.name)}')">${esc(m.name)}</button>`;
   });
   document.getElementById('filterRow').innerHTML=h;
 }
 function setFilter(f){activeFilter=f;render()}
-
 function renderCalendar(){
   const y=curYear,m=curMonth;
   const firstDay=new Date(y,m,1).getDay();
@@ -379,7 +420,7 @@ function renderCalendar(){
     const isT=TODAY.getFullYear()===y&&TODAY.getMonth()===m&&TODAY.getDate()===d;
     const dots=vs.slice(0,12).map(v=>{
       const idx=mgrIdx(v.manager);const c=mgrColor(idx<0?0:idx);
-      return `<div class="dot" style="background:${c.fg}" title="${v.manager}"></div>`;
+      return `<div class="dot" style="background:${c.fg}" title="${esc(v.manager)}"></div>`;
     }).join('');
     const hasComment=vs.some(v=>v.comment&&v.comment.trim());
     const cnt=vs.length>0?`<div class="visit-count">${vs.length}</div>`:'';
@@ -392,42 +433,25 @@ function renderCalendar(){
   }
   document.getElementById('calGrid').innerHTML=h;
 }
-
 function renderRanking(){
   const vs=getMonth(curYear,curMonth);
   const sc={};
-  vs.forEach(v=>{sc[v.store]=(sc[v.store]||0)+1});
+  vs.forEach(v=>{sc[v.store_id]=(sc[v.store_id]||0)+1});
   const maxCnt=Math.max(1,...Object.values(sc));
-
   let h='';
   stores.forEach((s,i)=>{
-    const parts=s.split('|');
-    const name=parts.length>1?parts[1]:s;
-    const region=parts.length>1?parts[0]:'';
-    const cnt=sc[s]||0;
+    const cnt=sc[s.id]||0;
     const barW=cnt>0?Math.max(4,Math.round(cnt/maxCnt*100)):0;
-    const checkCnt=getCheckCount(s,curYear,curMonth);
-
-    // last visit date this month
-    const storeVisitsMonth=vs.filter(v=>v.store===s);
-    let lastDate='';
-    if(storeVisitsMonth.length){
-      const dates=Object.keys(visits).filter(k=>{
-        const mk=monthKey(curYear,curMonth)+'-';
-        return k.startsWith(mk)&&visits[k].some(v=>v.store===s);
-      }).sort();
-      if(dates.length) lastDate=dates[dates.length-1].split('-')[2]+'일';
-    }
-
-    // check badges 1~5
+    const checkCnt=getCheckCount(s.id,curYear,curMonth);
+    const dates=vs.filter(v=>v.store_id===s.id).map(v=>v.date).sort();
+    const lastDate=dates.length?dates[dates.length-1].split('-')[2]+'일':'';
     let checkBadges='';
     for(let n=1;n<=5;n++){
-      checkBadges+=`<span class="check-badge${checkCnt>=n?' checked':''}" onclick="event.stopPropagation();toggleCheck('${s.replace(/'/g,"\\'")}',${n})" title="${n}회 체크">${n}</span>`;
+      checkBadges+=`<span class="check-badge${checkCnt>=n?' checked':''}" onclick="event.stopPropagation();toggleCheck('${s.id}',${n})" title="${n}회 체크">${n}</span>`;
     }
-
-    h+=`<tr class="clickable" onclick="openStoreDetail('${s.replace(/'/g,"\\'")}')">
+    h+=`<tr class="clickable" onclick="openStoreDetail('${s.id}')">
       <td class="r-num">${i+1}</td>
-      <td><span class="r-region">${region}</span>${name}</td>
+      <td><span class="r-region">${esc(s.region || '')}</span>${esc(s.name)}</td>
       <td class="r-cnt-cell"><span class="r-cnt-num">${cnt}</span></td>
       <td><div class="r-bar-wrap"><div class="r-bar" style="width:${barW}%"></div></div></td>
       <td class="r-last-visit">${lastDate}</td>
@@ -436,57 +460,51 @@ function renderRanking(){
   });
   document.getElementById('rankBody').innerHTML=h||`<tr><td colspan="6" class="empty">매장이 없습니다</td></tr>`;
 }
-
-function toggleCheck(store, n){
-  const cur=getCheckCount(store,curYear,curMonth);
-  // clicking same number toggles off, otherwise set to n
-  setCheckCount(store,curYear,curMonth, cur===n?n-1:n);
-  renderRanking();
+async function toggleCheck(storeId, n){
+  const cur=getCheckCount(storeId,curYear,curMonth);
+  await setCheckCount(storeId,curYear,curMonth, cur===n?n-1:n);
 }
-
 function renderSettings(){
   document.getElementById('mgrList').innerHTML=managers.map((m,i)=>{
     const c=mgrColor(i);
-    return `<div class="item-row"><div class="item-dot" style="background:${c.fg}"></div><span class="item-name">${m}</span><button class="item-del" onclick="delManager(${i})">✕</button></div>`;
+    return `<div class="item-row"><div class="item-dot" style="background:${c.fg}"></div><span class="item-name">${esc(m.name)}</span><button class="item-del" onclick="delManager('${m.id}')">✕</button></div>`;
   }).join('')||'<div class="empty" style="padding:8px">관리자가 없습니다</div>';
-
-  document.getElementById('storeList').innerHTML=stores.map((s,i)=>{
-    const parts=s.split('|');
-    const label=parts.length>1?`<span class="s-region">${parts[0]}</span>${parts[1]}`:s;
-    return `<div class="item-row"><span class="item-name">${label}</span><button class="item-del" onclick="delStore(${i})">✕</button></div>`;
+  document.getElementById('storeList').innerHTML=stores.map(s=>{
+    return `<div class="item-row"><span class="item-name"><span class="s-region">${esc(s.region || '')}</span>${esc(s.name)}</span><button class="item-del" onclick="delStore('${s.id}')">✕</button></div>`;
   }).join('')||'<div class="empty" style="padding:8px">매장이 없습니다</div>';
 }
-
-function addManager(){
+async function addManager(){
   const el=document.getElementById('newMgr');const n=el.value.trim();
-  if(!n||managers.includes(n))return;
-  managers.push(n);el.value='';save('vt_managers',managers);render();
+  if(!n||managers.some(m=>m.name===n))return;
+  await run(db.from('managers').insert({name:n,sort_order:managers.length}));
+  el.value='';
+  await loadAll();
 }
-function delManager(i){
-  if(!confirm(`"${managers[i]}" 관리자를 삭제할까요?`))return;
-  managers.splice(i,1);save('vt_managers',managers);render();
+async function delManager(id){
+  const m=managers.find(x=>x.id===id);
+  if(!m || !confirm(`"${m.name}" 관리자를 삭제할까요? 관련 방문 기록도 삭제됩니다.`))return;
+  await run(db.from('managers').delete().eq('id',id));
+  await loadAll();
 }
-function addStore(){
+async function addStore(){
   const r=document.getElementById('newRegion').value.trim();
   const n=document.getElementById('newStore').value.trim();
-  if(!n)return;
-  const full=r?`${r}|${n}`:n;
-  if(stores.includes(full))return;
-  stores.push(full);
+  if(!n || stores.some(s=>s.region===r&&s.name===n))return;
+  await run(db.from('stores').insert({region:r,name:n,sort_order:stores.length}));
   document.getElementById('newRegion').value='';
   document.getElementById('newStore').value='';
-  save('vt_stores',stores);render();
+  await loadAll();
 }
-function delStore(i){
-  if(!confirm(`"${stores[i].split('|').pop()}" 매장을 삭제할까요?`))return;
-  stores.splice(i,1);save('vt_stores',stores);render();
+async function delStore(id){
+  const s=stores.find(x=>x.id===id);
+  if(!s || !confirm(`"${s.name}" 매장을 삭제할까요? 관련 방문 기록도 삭제됩니다.`))return;
+  await run(db.from('stores').delete().eq('id',id));
+  await loadAll();
 }
-
-// ── 날짜 모달 ──
 function openModal(y,m,d){
   currentKey=dateKey(y,m,d);selectedStore=null;
   document.getElementById('modalTitle').textContent=`${y}년 ${MONTHS[m]} ${d}일`;
-  document.getElementById('selMgr').innerHTML=managers.map(m=>`<option value="${m}">${m}</option>`).join('');
+  document.getElementById('selMgr').innerHTML=managers.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('');
   document.getElementById('visitComment').value='';
   renderModalLog();renderModalStores();
   document.getElementById('overlay').classList.add('show');
@@ -495,65 +513,56 @@ function renderModalLog(){
   const vs=getDay(currentKey);
   if(!vs.length){document.getElementById('modalLog').innerHTML='<p style="color:var(--text3);font-size:13px">방문 기록이 없습니다</p>';return}
   let h='<div class="visit-log">';
-  vs.forEach((v,i)=>{
+  vs.forEach(v=>{
     const idx=mgrIdx(v.manager);const c=mgrColor(idx<0?0:idx);
-    const store=v.store.split('|').pop();
-    const comment=v.comment?`<div class="v-comment">💬 ${v.comment}</div>`:'';
+    const store=splitStoreKey(v.store).name;
+    const comment=v.comment?`<div class="v-comment">💬 ${esc(v.comment)}</div>`:'';
     h+=`<div class="v-entry">
-      <span class="v-badge" style="background:${c.bg};color:${c.fg}">${v.manager}</span>
-      <div class="v-info"><div class="v-store">${store}</div>${comment}</div>
-      <button class="v-del" onclick="delVisit(${i})">✕</button>
+      <span class="v-badge" style="background:${c.bg};color:${c.fg}">${esc(v.manager)}</span>
+      <div class="v-info"><div class="v-store">${esc(store)}</div>${comment}</div>
+      <button class="v-del" onclick="delVisit('${v.id}')">✕</button>
     </div>`;
   });
   document.getElementById('modalLog').innerHTML=h+'</div>';
 }
 function renderModalStores(){
   document.getElementById('modalStores').innerHTML=stores.map(s=>{
-    const parts=s.split('|');const name=parts.length>1?parts[1]:s;const region=parts.length>1?parts[0]:'';
-    const sel=selectedStore===s;
-    return `<div class="s-item${sel?' sel':''}" onclick="selStore('${s.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')">
-      <input type="checkbox" ${sel?'checked':''} onclick="event.stopPropagation();selStore('${s.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')">
-      <span><span class="s-region">${region}</span>${name}</span>
+    const sel=selectedStore===s.id;
+    return `<div class="s-item${sel?' sel':''}" onclick="selStore('${s.id}')">
+      <input type="checkbox" ${sel?'checked':''} onclick="event.stopPropagation();selStore('${s.id}')">
+      <span><span class="s-region">${esc(s.region || '')}</span>${esc(s.name)}</span>
     </div>`;
   }).join('')||'<div class="empty">매장이 없습니다</div>';
 }
-function selStore(s){selectedStore=selectedStore===s?null:s;renderModalStores()}
-function addVisit(){
+function selStore(id){selectedStore=selectedStore===id?null:id;renderModalStores()}
+async function addVisit(){
   if(!selectedStore){alert('매장을 선택해주세요');return}
-  const manager=document.getElementById('selMgr').value;
+  const managerId=document.getElementById('selMgr').value;
   const comment=document.getElementById('visitComment').value.trim();
-  if(!visits[currentKey])visits[currentKey]=[];
-  visits[currentKey].push({manager,store:selectedStore,comment});
+  await run(db.from('visits').insert({visit_date:currentKey,manager_id:managerId,store_id:selectedStore,comment}));
   selectedStore=null;
   document.getElementById('visitComment').value='';
-  save('vt_visits',visits);
-  renderModalLog();renderModalStores();renderCalendar();renderRanking();
+  await loadAll();
+  renderModalLog();renderModalStores();
 }
-function delVisit(i){
-  visits[currentKey].splice(i,1);
-  if(!visits[currentKey].length)delete visits[currentKey];
-  save('vt_visits',visits);
-  renderModalLog();renderCalendar();renderRanking();
+async function delVisit(id){
+  await run(db.from('visits').delete().eq('id',id));
+  await loadAll();
+  renderModalLog();
 }
-
-// ── 상권 상세 모달 ──
-function openStoreDetail(store){
-  const parts=store.split('|');
-  const name=parts.length>1?parts[1]:store;
-  const region=parts.length>1?parts[0]:'';
-  document.getElementById('sdTitle').textContent=`${region} | ${name}`;
-
-  const allVisits=getStoreVisits(store);
+function openStoreDetail(storeId){
+  const store=stores.find(s=>s.id===storeId);
+  if(!store)return;
+  document.getElementById('sdTitle').textContent=`${store.region || ''} | ${store.name}`;
+  const allVisits=visitRows.filter(v=>v.store_id===storeId).sort((a,b)=>b.date.localeCompare(a.date));
   const thisMonth=allVisits.filter(v=>v.date.startsWith(monthKey(curYear,curMonth)+'-'));
   const mgrSet=new Set(allVisits.map(v=>v.manager));
-
   let statsHtml=`
     <div class="sd-stats">
       <div class="sd-stat"><div class="sd-stat-val">${thisMonth.length}</div><div class="sd-stat-lbl">이번 달 방문</div></div>
       <div class="sd-stat"><div class="sd-stat-val">${allVisits.length}</div><div class="sd-stat-lbl">누적 방문</div></div>
       <div class="sd-stat"><div class="sd-stat-val">${mgrSet.size}</div><div class="sd-stat-lbl">방문 관리자 수</div></div>
     </div>`;
-
   let logHtml='';
   if(allVisits.length===0){
     logHtml='<div class="empty">방문 기록이 없습니다</div>';
@@ -562,52 +571,83 @@ function openStoreDetail(store){
     allVisits.forEach(v=>{
       const idx=mgrIdx(v.manager);const c=mgrColor(idx<0?0:idx);
       const dp=v.date.split('-');const dateStr=`${dp[0]}년 ${parseInt(dp[1])}월 ${parseInt(dp[2])}일`;
-      const comment=v.comment?`<div class="sd-entry-comment">💬 ${v.comment}`:'';
+      const comment=v.comment?`<div class="sd-entry-comment">💬 ${esc(v.comment)}</div>`:'';
       logHtml+=`<div class="sd-entry">
         <div class="sd-entry-top">
           <span class="sd-entry-date">${dateStr}</span>
-          <span class="sd-entry-mgr" style="background:${c.bg};color:${c.fg}">${v.manager}</span>
-        </div>${comment?comment+'</div>':''}
+          <span class="sd-entry-mgr" style="background:${c.bg};color:${c.fg}">${esc(v.manager)}</span>
+        </div>${comment}
       </div>`;
     });
     logHtml+='</div>';
   }
-
   document.getElementById('sdBody').innerHTML=statsHtml+logHtml;
   document.getElementById('storeOverlay').classList.add('show');
 }
-
 function closeModal(id){document.getElementById(id).classList.remove('show')}
-
-// ── 데이터 관리 ──
+async function seedDefaultData(){
+  if(!confirm('기본 관리자와 남부산 매장 목록을 추가할까요? 이미 있는 이름은 건너뜁니다.')) return;
+  const mgrPayload=DEFAULT_MANAGERS
+    .filter(name=>!managers.some(m=>m.name===name))
+    .map((name,i)=>({name,sort_order:managers.length+i}));
+  const storePayload=DEFAULT_STORES
+    .map(splitStoreKey)
+    .filter(s=>!stores.some(x=>x.region===s.region&&x.name===s.name))
+    .map((s,i)=>({...s,sort_order:stores.length+i}));
+  if(mgrPayload.length) await run(db.from('managers').insert(mgrPayload));
+  if(storePayload.length) await run(db.from('stores').insert(storePayload));
+  await loadAll();
+}
 function exportData(){
-  const data={managers,stores,visits,checks,exportedAt:new Date().toISOString()};
+  const data={managers,stores,visits:visitRows,checks,exportedAt:new Date().toISOString()};
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
   a.download=`visit_data_${new Date().toISOString().slice(0,10)}.json`;a.click();
 }
-function importData(e){
+async function importData(e){
   const file=e.target.files[0];if(!file)return;
   const reader=new FileReader();
-  reader.onload=function(ev){
+  reader.onload=async function(ev){
     try{
       const data=JSON.parse(ev.target.result);
-      if(confirm('기존 데이터를 불러온 데이터로 대체할까요?')){
-        if(data.managers){managers=data.managers;save('vt_managers',managers)}
-        if(data.stores){stores=data.stores;save('vt_stores',stores)}
-        if(data.visits){visits=data.visits;save('vt_visits',visits)}
-        if(data.checks){checks=data.checks;save('vt_checks',checks)}
-        render();alert('데이터를 성공적으로 불러왔습니다.');
+      if(!confirm('JSON 안의 방문 기록을 Supabase에 추가할까요?')) return;
+      const mgrMap=new Map(managers.map(m=>[m.name,m.id]));
+      const storeMap=new Map(stores.map(s=>[storeKey(s),s.id]));
+      const rows=Array.isArray(data.visits) ? data.visits : Object.entries(data.visits || {}).flatMap(([date,vs])=>vs.map(v=>({...v,date})));
+      for(const row of rows){
+        if(!mgrMap.has(row.manager)){
+          const inserted=await run(db.from('managers').insert({name:row.manager}).select().single());
+          mgrMap.set(row.manager,inserted.id);
+        }
+        if(!storeMap.has(row.store)){
+          const s=splitStoreKey(row.store);
+          const inserted=await run(db.from('stores').insert(s).select().single());
+          storeMap.set(row.store,inserted.id);
+        }
+        await run(db.from('visits').insert({
+          visit_date: row.date,
+          manager_id: mgrMap.get(row.manager),
+          store_id: storeMap.get(row.store),
+          comment: row.comment || ''
+        }));
       }
-    }catch(err){alert('파일을 읽을 수 없습니다.')}
+      await loadAll();
+      alert('데이터를 성공적으로 불러왔습니다.');
+    }catch(err){
+      console.error(err);
+      alert('파일을 읽을 수 없습니다.');
+    }
   };
   reader.readAsText(file);e.target.value='';
 }
-function clearAll(){
-  if(confirm('모든 방문 기록을 초기화할까요?')){visits={};save('vt_visits',visits);render()}
+async function clearVisits(){
+  if(confirm('모든 방문 기록을 초기화할까요? 관리자와 매장은 유지됩니다.')){
+    await run(db.from('visits').delete().neq('id','00000000-0000-0000-0000-000000000000'));
+    await run(db.from('store_checks').delete().neq('store_id','00000000-0000-0000-0000-000000000000'));
+    await loadAll();
+  }
 }
 
-// ── 이벤트 ──
 document.getElementById('prevM').onclick=()=>{if(curMonth===0){curMonth=11;curYear--}else curMonth--;render()};
 document.getElementById('nextM').onclick=()=>{if(curMonth===11){curMonth=0;curYear++}else curMonth++;render()};
 document.querySelectorAll('.tab').forEach(t=>{
@@ -625,6 +665,7 @@ document.getElementById('overlay').addEventListener('click',e=>{if(e.target===do
 document.getElementById('storeOverlay').addEventListener('click',e=>{if(e.target===document.getElementById('storeOverlay'))closeModal('storeOverlay')});
 
 render();
+loadAll();
 </script>
 </body>
 </html>
